@@ -15,3 +15,6 @@ make
 ```
 ./emulator <path to game>
 ```
+
+## Demo
+https://github.com/user-attachments/assets/bade4318-1d1e-4c00-b6b0-6b47d12868f6
