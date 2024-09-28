@@ -25,8 +25,6 @@ unsigned char chip8_fontset[80] =
 
 Chip8::Chip8() {}
 
-Chip8::~Chip8() {}
-
 void Chip8::initialize() {
     pc = 0x200;  // program counter starts at 0x200
     opcode = 0;  // reset current opcode
@@ -60,18 +58,18 @@ void Chip8::initialize() {
 
 void Chip8::loadGame(const char* filename) {
     // open the file in binary mode and at end to get size
-    std::ifstream file(filename, ios::binary  | ios::ate);
+    std::ifstream file(filename, std::ios::binary  | std::ios::ate);
     if (file.is_open()) {
         // get position in file (size) & check if it fits in memory
         int size = file.tellg();
         if (size > 4096 - 512) {
             std::cerr << "Error: ROM too large to fit in memory" << std::endl;
-            return;
+            exit(1);
         }
 
         // create buffer & store
         char* buffer = new char[size];
-        file.seekg(0, ios::beg);
+        file.seekg(0, std::ios::beg);
         file.read(buffer, size);
         file.close();
 
@@ -84,6 +82,7 @@ void Chip8::loadGame(const char* filename) {
     }
     else {
         std::cerr << "Error: Unable to open file" << std::endl;
+        exit(1);
     }
 }
 
@@ -94,128 +93,157 @@ void Chip8::emulateCycle() {
 
     // decode opcode
     switch (opcode & 0xf000) {
-        case 0x0000:
-            switch(opcode & 0x0fff){
+        case 0x0000: {
+            switch(opcode & 0x0fff) {
                 // 00e0: clear the screen
-                case 0x00e0:
+                case 0x00e0: {
                     for (int i = 0; i < 2048; ++i) {
                         display[i] = 0;
                     }
                     drawFlag = true;
                     break;
+                }
                 // 00ee: return --- set pc to return address saved in stack
-                case 0x00ee:
+                case 0x00ee: {
                     --sp;   // return address stored in stack level below current 
                     pc = stack[sp];
                     break;
-                default:
+                }
+                case 0x0000: break;
+                default: {
                     std::cerr << "Unknown opcode: " << opcode << std::endl;
+                    exit(1);
+                }
             }
             break;
-        case 0x1000:
+        }
+        case 0x1000: {
             // 1nnn: jump to address nnn
             pc = opcode & 0x0fff;
             break;
-        case 0x2000:
+        }
+        case 0x2000: {
             // 2nnn: go to subroutine at nnn
             stack[sp] = pc; // store return address in stack
             ++sp;   // increment stack pointer to clear for subroutine
             pc = opcode & 0x0fff;
             break;
-        case 0x3000:
+        }
+        case 0x3000: {
             // 3xkk: skip next instruction if Vx == kk
             if (V[(opcode & 0x0f00) >> 8] == (opcode & 0x00ff)) {   
                 pc += 2;
             }
             break;
-        case 0x4000:
+        }
+        case 0x4000: {
             // 4xkk: skip next instruction if Vx != kk
             if (V[(opcode & 0x0f00) >> 8] != (opcode & 0x00ff)) {
                 pc += 2;
             }
             break;
-        case 0x5000:
+        }
+        case 0x5000: {
             // 5xy0: skip next instruction if Vx == Vy
             if (V[(opcode & 0x0f00) >> 8] == V[(opcode & 0x00f0) >> 4]) {
                 pc += 2;
             }
             break;
-        case 0x6000:
+        }
+        case 0x6000: {
             // 6xkk: Vx = kk
             V[(opcode & 0x0f00) >> 8] = opcode & 0x00ff;
             break;
-        case 0x7000:
+        }
+        case 0x7000: {
             // 7xkk: Vx = Vx + kk
             V[(opcode & 0x0f00) >> 8] += opcode & 0x00ff;
             break;
-        case 0x8000:
-            int x = (opcode & 0x0f00) >> 8;
-            int y = (opcode & 0x00f0) >> 4;
+        }
+        case 0x8000: {
+            uint8_t x = (opcode & 0x0f00) >> 8;
+            uint8_t y = (opcode & 0x00f0) >> 4;
             switch(opcode & 0x000f) {
                 // 0x8xy0: Vx = Vy
-                case 0x0000:
+                case 0x0000: {
                     V[x] = V[y];
                     break;
+                }
                 // 0x8xy1: Vx |= Vy
-                case 0x0001:
+                case 0x0001: {
                     V[x] |= V[y];
                     break;
+                }
                 // 0x8xy2: Vx &= Vy
-                case 0x0002:
+                case 0x0002: {
                     V[x] &= V[y];
                     break;
+                }
                 // 0x8xy3: Vx ^= Vy
-                case 0x0003:
+                case 0x0003: {
                     V[x] ^= V[y];
                     break;
+                }
                 // 0x8xy4: Vx += Vy, VF = carry
-                case 0x0004:
+                case 0x0004: {
                     V[0xf] = (V[x] + V[y] > 255) ? 1 : 0;
                     V[x] += V[y];
                     break;
+                }
                 // 0x8xy5: Vx -= Vy, VF = !borrow
-                case 0x0005:
+                case 0x0005: {
                     V[0xf] = (V[x] > V[y]) ? 1 : 0;
                     V[x] -= V[y];
                     break;
+                }
                 // 0x8xy6: Vx >>= 1, VF = lsb of Vx
-                case 0x0006:
+                case 0x0006: {
                     V[0xf] = V[x] & 0x1;
                     V[x] >>= 1;
                     break;
+                }
                 // 0x8xy7: Vx = Vy - Vx, VF = !borrow
-                case 0x0007:
+                case 0x0007: {
                     V[0xf] = (V[y] > V[x]) ? 1 : 0;
                     V[x] = V[y] - V[x];
                     break;
+                }
                 // 0x8xye: Vx <<= 1, VF = msb of Vx
-                case 0x000e:
+                case 0x000e: {
                     V[0xf] = V[x] >> 7;
                     V[x] <<= 1;
                     break;
-                default:
+                }
+                default: {
                     std::cerr << "Unknown opcode: " << opcode << std::endl;
+                    exit(1);
+                }
             }
             break;
-        case 0x9000:
+        }
+        case 0x9000: {
             // 9xy0: skip next instruction if Vx != Vy
             if (V[(opcode & 0x0f00) >> 8] != V[(opcode & 0x00f0) >> 4]) {
                 pc += 2;
             }
             break;
-        case 0xa000:
+        }
+        case 0xa000: {
             // annn: set I = nnn
             I = opcode & 0x0fff;
             break;
-        case 0xb000:
+        }
+        case 0xb000: {
             // bnnn: jump to location nnn + V0
             pc = (opcode & 0x0fff) + V[0];
             break;
-        case 0xc000:
+        }
+        case 0xc000: {
             // cxkk: Vx = random byte & kk
             V[(opcode & 0x0f00) >> 8] = (rand() % 256) & (opcode & 0x00ff);
             break;
-        case 0xd000:
+        }
+        case 0xd000: {
             // dxyn: draw sprite at (Vx, Vy) with width 8 and height n
             uint8_t x = V[(opcode & 0x0f00) >> 8];
             uint8_t y = V[(opcode & 0x00f0) >> 4];
@@ -223,12 +251,12 @@ void Chip8::emulateCycle() {
             uint8_t pixel;
 
             // set VF = 0 --- collision detection
-            V[0xf0] = 0;
+            V[0xf] = 0;
 
             // set each row of 8 pixels
             for (int yline = 0; yline < height; ++yline) {
                 pixel = memory[I + yline];  // each row is byte starting at I
-                for (int xline = 0; xline < 8; ++xline) {
+                for (int xline = 0; xline < 8; xline++) {
                     // check if pixel is set by anding with 0x80 (1000 0000) shifted right by xline to get the current pixel bit
                     if ((pixel & (0x80 >> xline))) {
                         uint16_t index = x + xline + ((y + yline) * 64);    // location of pixel on display
@@ -243,32 +271,39 @@ void Chip8::emulateCycle() {
             }
             drawFlag = true;    // set draw flag to update screen
             break;
-        case 0xe000:
+        }
+        case 0xe000: {
             switch(opcode & 0x00ff) {
                 // ex9e: skip next instruction if key with value Vx is pressed
-                case 0x009e:
+                case 0x009e: {
                     if (keypad[V[(opcode & 0x0f00) >> 8]]) {
                         pc += 2;
                     }
                     break;
+                }
                 // exa1: skip next instruction if key with value Vx is not pressed
-                case 0x00a1:
+                case 0x00a1: {
                     if (!keypad[V[(opcode & 0x0f00) >> 8]]) {
                         pc += 2;
                     }
                     break;
-                default:
+                }
+                default: {
                     std::cerr << "Unknown opcode: " << opcode << std::endl;
+                    exit(1);
+                }
             }
             break;
-        case 0xf000:
+        }
+        case 0xf000: {
             switch(opcode & 0x00ff) {
                 // fx07: Vx = delay timer
-                case 0x0007:
+                case 0x0007: {
                     V[(opcode & 0x0f00) >> 8] = delay_timer;
                     break;
+                }
                 // fx0a: wait for key press and store value in Vx
-                case 0x000a:
+                case 0x000a: {
                     bool keyPress = false;
                     for (int i = 0; i < 16; ++i) {
                         if (keypad[i]) {
@@ -280,47 +315,60 @@ void Chip8::emulateCycle() {
                         return;
                     }
                     break;
+                }
                 // fx15: delay timer = Vx
-                case 0x0015:
+                case 0x0015: {
                     delay_timer = V[(opcode & 0x0f00) >> 8];
                     break;
+                }
                 // fx18: sound timer = Vx
-                case 0x0018:
+                case 0x0018: {
                     sound_timer = V[(opcode & 0x0f00) >> 8];
                     break;
+                }
                 // fx1e: I += Vx
-                case 0x001e:
+                case 0x001e: {
                     I += V[(opcode & 0x0f00) >> 8];
                     break;
+                }
                 // fx29: set I to location of sprite for digit Vx
-                case 0x0029:
+                case 0x0029: {
                     I = V[(opcode & 0x0f00) >> 8] * 5;    // multiply by 5 since each sprite is 5 bytes long
                     break;
+                }
                 // fx33: store decimal representation of Vx with hundredths, tenths, ones in memory locations I, I+1, I+2
-                case 0x0033:
+                case 0x0033: {
                     uint8_t Vx = V[(opcode & 0x0f00) >> 8];
                     memory[I] = Vx / 100;
                     memory[I + 1] = (Vx / 10) % 10;
                     memory[I + 2] = Vx % 10;
                     break;
+                }
                 // fx55: store V0 to Vx in memory starting at location I
-                case 0x0055:
+                case 0x0055: {
                     for (int i = 0; i <= ((opcode & 0x0f00) >> 8); ++i) {
                         memory[I + i] = V[i];
                     }
                     break;
+                }
                 // fx65: fill V0 to Vx with values from memory starting at location I
-                case 0x0065:
+                case 0x0065: {
                     for (int i = 0; i <= ((opcode & 0x0f00) >> 8); ++i) {
                         V[i] = memory[I + i];
                     }
                     break;
-                default:
+                }
+                default: {
                     std::cerr << "Unknown opcode: " << opcode << std::endl;
+                    exit(1);
+                }
             }
             break;
-        default:
+        }
+        default: {
             std::cerr << "Unknown opcode: " << opcode << std::endl;
+            exit(1);
+        }
     }
 
     // update timers
@@ -329,9 +377,8 @@ void Chip8::emulateCycle() {
     }
     if (sound_timer > 0) {
         if (sound_timer == 1) {
-            std::cout << '\a' << std::endl;
+            // make sound
         }
         --sound_timer;
     }
-    
 }

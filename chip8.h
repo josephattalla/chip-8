@@ -13,12 +13,12 @@ class Chip8 {
         uint8_t sp;
         uint8_t delay_timer;
         uint8_t sound_timer;
-        uint8_t keypad[16];
-        uint8_t display[64 * 32];
         uint16_t opcode;
-        bool drawFlag;
     
     public:
+        uint8_t keypad[16];
+        uint8_t display[64 * 32];
+        bool drawFlag;
         Chip8();
         void initialize();
         void loadGame(const char* filename);
