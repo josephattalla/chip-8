@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 
+
 int main(int argc, char* argv[]) {
     // check for ROM file
     if (argc != 2) {
@@ -35,6 +36,26 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: Renderer could not be created" << std::endl;
         return 1;
     }
+
+    // map SDL keys to index
+    uint8_t keypadMap[16] = {
+        SDLK_0,
+        SDLK_1,
+        SDLK_2,
+        SDLK_3,
+        SDLK_4,
+        SDLK_5,
+        SDLK_6,
+        SDLK_7,
+        SDLK_8,
+        SDLK_9,
+        SDLK_a,
+        SDLK_b,
+        SDLK_c,
+        SDLK_d,
+        SDLK_e,
+        SDLK_f
+    };
 
     // emulate cycle
     while (true) {
@@ -72,43 +93,19 @@ int main(int argc, char* argv[]) {
                     SDL_Quit();
                     return 0;
                 case SDL_KEYDOWN:
-                    switch(e.key.keysym.sym) {
-                        case SDLK_1: chip8.keypad[0x1] = 1; break; // 1
-                        case SDLK_2: chip8.keypad[0x2] = 1; break; // 2
-                        case SDLK_3: chip8.keypad[0x3] = 1; break; // 3
-                        case SDLK_4: chip8.keypad[0x4] = 1; break; // 4
-                        case SDLK_5: chip8.keypad[0x5] = 1; break; // 5
-                        case SDLK_6: chip8.keypad[0x6] = 1; break; // 6
-                        case SDLK_7: chip8.keypad[0x7] = 1; break; // 7
-                        case SDLK_8: chip8.keypad[0x8] = 1; break; // 8
-                        case SDLK_9: chip8.keypad[0x9] = 1; break; // 9
-                        case SDLK_0: chip8.keypad[0x0] = 1; break; // 0
-                        case SDLK_a: chip8.keypad[0xA] = 1; break; // a
-                        case SDLK_b: chip8.keypad[0xB] = 1; break; // b
-                        case SDLK_c: chip8.keypad[0xC] = 1; break; // c
-                        case SDLK_d: chip8.keypad[0xD] = 1; break; // d
-                        case SDLK_e: chip8.keypad[0xE] = 1; break; // e
-                        case SDLK_f: chip8.keypad[0xF] = 1; break; // f
+                    // match key press to keypad index, set to 1
+                    for (uint8_t i = 0; i < 16; ++i) {
+                        if (e.key.keysym.sym == keypadMap[i]) {
+                            chip8.keypad[i] = 1;
+                        }
                     }
                     break;
                 case SDL_KEYUP:
-                    switch(e.key.keysym.sym) {
-                        case SDLK_1: chip8.keypad[0x1] = 0; break; // 1
-                        case SDLK_2: chip8.keypad[0x2] = 0; break; // 2
-                        case SDLK_3: chip8.keypad[0x3] = 0; break; // 3
-                        case SDLK_4: chip8.keypad[0x4] = 0; break; // 4
-                        case SDLK_5: chip8.keypad[0x5] = 0; break; // 5
-                        case SDLK_6: chip8.keypad[0x6] = 0; break; // 6
-                        case SDLK_7: chip8.keypad[0x7] = 0; break; // 7
-                        case SDLK_8: chip8.keypad[0x8] = 0; break; // 8
-                        case SDLK_9: chip8.keypad[0x9] = 0; break; // 9
-                        case SDLK_0: chip8.keypad[0x0] = 0; break; // 0
-                        case SDLK_a: chip8.keypad[0xA] = 0; break; // a
-                        case SDLK_b: chip8.keypad[0xB] = 0; break; // b
-                        case SDLK_c: chip8.keypad[0xC] = 0; break; // c
-                        case SDLK_d: chip8.keypad[0xD] = 0; break; // d
-                        case SDLK_e: chip8.keypad[0xE] = 0; break; // e
-                        case SDLK_f: chip8.keypad[0xF] = 0; break; // f
+                    // match key release to keypad index, set to 0
+                    for (uint8_t i = 0; i < 16; ++i) {
+                        if (e.key.keysym.sym == keypadMap[i]) {
+                            chip8.keypad[i] = 0;
+                        }
                     }
                     break;
             }       
